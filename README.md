@@ -11,7 +11,7 @@ instead of just handing you the answer.
 
 ## Install
 
-npm install -g fence
+npm install fence
 
 ## Usage
 
