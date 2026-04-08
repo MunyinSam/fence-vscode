@@ -3,7 +3,7 @@ import * as path from 'path';
 import { DetectionRule, Skill, SkillLevel } from "../types";
 
 export async function detect(projectPath: string): Promise<Skill[]> {
-    let files = await fs.readdir(projectPath, {recursive: true})
+    let files = await fs.readdir(projectPath, {recursive: true});
     
     const pattern = /\.ts$|\.js$|\.py$|\.tsx$|\.jsx$/;
     const codeFiles = files.filter(f => pattern.test(f));
