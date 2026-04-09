@@ -24,4 +24,5 @@ export default [{
         "no-throw-literal": "warn",
         semi: "warn",
     },
+    ignores: ["**/*.test.*"]
 }];

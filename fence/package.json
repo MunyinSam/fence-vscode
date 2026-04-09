@@ -1,48 +1,26 @@
 {
-  "name": "fence",
-  "displayName": "fence",
+  "name": "@munyinsam/fence",
   "description": "Keep AI in learning mode. Fence integrates with Claude Code and limits it",
-  "version": "0.0.1",
-  "engines": {
-    "vscode": "^1.115.0"
-  },
-  "categories": [
-    "Other"
-  ],
-  "activationEvents": [],
-  "main": "./out/extension.js",
-  "contributes": {
-    "commands": [
-      {
-        "command": "fence.helloWorld",
-        "title": "Hello World"
-      }
-    ]
-  },
+  "version": "1.0.2",
+  "main": "./dist/cli/index.js",
+  "files": ["dist", "bin"],
+  "engines": { "node": ">=18" },
   "bin": {
     "fence": "./bin/fence.js"
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
-    "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src",
-    "test": "vscode-test"
+    "build": "tsc -p ./",
+    "dev": "ts-node src/cli/index.ts"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
-    "@types/node": "^22.19.17",
     "@types/vscode": "^1.115.0",
-    "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2",
     "eslint": "^9.39.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.56.1"
   },
   "dependencies": {
-    "commander": "^14.0.3",
-    "fs": "^0.0.1-security"
+    "commander": "^14.0.3"
   }
 }
