@@ -33,6 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+/* eslint-disable */
 const assert = __importStar(require("assert"));
 // You can import and use all API from the 'vscode' module
 // as well as import your extension to test it

@@ -60,4 +60,4 @@ export async function detect(projectPath: string): Promise<Skill[]> {
     return results;
 }
 
-detect("D:/Code/Personal/fence-vscode/fence/src").then(console.log);
+// detect("D:/Code/Personal/fence-vscode/fence/src").then(console.log);

@@ -1,18 +1,15 @@
-import { Skill, SkillLevel } from "../types";
-
-export function generate(skills: Skill[]): string {
-    const learningSkills = skills.filter(f => f.level === SkillLevel.Learning);
-    const knownedSkills = skills.filter(f => f.level === SkillLevel.Knows);
-
-    const output = `## Purpose
+## Purpose
 
 This tool scans your code and limits Claude to only help with what you've already demonstrated you know.
 
 ## What I Already Know
-${knownedSkills.map(s => `- ${s.name}`).join('\n')}
+- Async/Await
+- TypeScript Types
+- Arrow Functions
+- Destructuring
 
 ## What I'm Still Learning
-${learningSkills.map(s => `- ${s.name}`).join('\n')}
+- Express Routes
 
 ## Rules for Claude
 
@@ -35,8 +32,3 @@ If I ask you to implement something using a skill I'm still learning:
 - Write working implementations of skills listed under "Still Learning"
 
 If I ask you to "just write it", push back and ask what part I'm stuck on instead.
-`;
-
-    return output;
-
-}
