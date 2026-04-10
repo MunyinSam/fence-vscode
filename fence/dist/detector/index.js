@@ -84,5 +84,5 @@ async function detect(projectPath) {
     // console.log(filesContent);
     return results;
 }
-detect("D:/Code/Personal/fence-vscode/fence/src").then(console.log);
+// detect("D:/Code/Personal/fence-vscode/fence/src").then(console.log);
 //# sourceMappingURL=index.js.map
