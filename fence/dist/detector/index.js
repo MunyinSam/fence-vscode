@@ -478,21 +478,35 @@ function confidence(totalCount, relevantFileCount, weight) {
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
+const IGNORED_DIRS = new Set([
+    'node_modules', 'dist', 'out', 'build', '.git', '.svn',
+    'coverage', '.next', '.nuxt', '.cache', 'vendor', '__pycache__',
+    'target', 'bin', '.venv', 'venv', 'env',
+]);
+function isIgnored(filePath) {
+    return filePath.split(/[\\/]/).some(segment => IGNORED_DIRS.has(segment));
+}
 async function detect(projectPath) {
     const allEntries = await promises_1.default.readdir(projectPath, { recursive: true });
     const SUPPORTED = new Set(['.ts', '.js', '.tsx', '.jsx', '.mjs', '.cjs', '.py', '.go', '.java', '.cs', '.rs', '.rb', '.php']);
-    const codeFiles = allEntries.filter(f => SUPPORTED.has(ext(f)));
+    const codeFiles = allEntries.filter(f => SUPPORTED.has(ext(f)) && !isIgnored(f));
     const withStats = await Promise.all(codeFiles.map(async (f) => ({
         file: f,
         stat: await promises_1.default.stat(path.join(projectPath, f)),
     })));
-    const filesContent = await Promise.all(withStats
-        .filter(f => f.stat.isFile())
-        .map(async (f) => ({
-        file: f.file,
-        ext: ext(f.file),
-        text: await promises_1.default.readFile(path.join(projectPath, f.file), 'utf-8'),
-    })));
+    // Read files sequentially in batches to avoid EMFILE (too many open files)
+    const validFiles = withStats.filter(f => f.stat.isFile());
+    const filesContent = [];
+    const BATCH_SIZE = 20;
+    for (let i = 0; i < validFiles.length; i += BATCH_SIZE) {
+        const batch = validFiles.slice(i, i + BATCH_SIZE);
+        const results = await Promise.all(batch.map(async (f) => ({
+            file: f.file,
+            ext: ext(f.file),
+            text: await promises_1.default.readFile(path.join(projectPath, f.file), 'utf-8'),
+        })));
+        filesContent.push(...results);
+    }
     const results = [];
     for (const rule of RULES) {
         const relevantFiles = filesContent.filter(f => rule.fileTypes.includes(f.ext));
