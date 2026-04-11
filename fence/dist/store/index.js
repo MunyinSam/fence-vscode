@@ -38,49 +38,53 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LoadSkills = LoadSkills;
 exports.saveSkills = saveSkills;
+const types_1 = require("../types");
 const promises_1 = __importDefault(require("node:fs/promises"));
 const node_os_1 = __importDefault(require("node:os"));
 const path = __importStar(require("path"));
+const STORE_PATH = path.join(node_os_1.default.homedir(), '.fence', 'skills.json');
+/** Migrate a raw JSON entry from the old format (had `desc`, numeric level) */
+function migrate(raw) {
+    return {
+        name: String(raw.name ?? ''),
+        language: String(raw.language ?? 'Unknown'),
+        level: raw.level === 0 || raw.level === types_1.SkillLevel.Knows ? types_1.SkillLevel.Knows : types_1.SkillLevel.Learning,
+        confidence: typeof raw.confidence === 'number' ? raw.confidence : (raw.level === 0 ? 70 : 30),
+        usageCount: typeof raw.usageCount === 'number' ? raw.usageCount : 0,
+    };
+}
 async function LoadSkills() {
     try {
-        const storePath = path.join(node_os_1.default.homedir(), '.fence', 'skills.json');
-        const skillsFile = await promises_1.default.readFile(storePath, 'utf-8');
-        return JSON.parse(skillsFile);
+        const raw = await promises_1.default.readFile(STORE_PATH, 'utf-8');
+        const parsed = JSON.parse(raw);
+        return parsed.map(migrate);
     }
-    catch (error) {
+    catch {
         return [];
     }
 }
 async function saveSkills(skills) {
-    await promises_1.default.mkdir(path.join(node_os_1.default.homedir(), '.fence'), { recursive: true });
-    const storePath = path.join(node_os_1.default.homedir(), '.fence', 'skills.json');
-    try {
-        const storedSkills = await LoadSkills();
-        for (let skill of skills) {
-            let index = storedSkills.findIndex(s => s.name === skill.name);
-            if (index === -1) {
-                storedSkills.push(skill);
-            }
-            else if (skill.level === 0) {
-                storedSkills[index].level = 0;
-            }
+    await promises_1.default.mkdir(path.dirname(STORE_PATH), { recursive: true });
+    const stored = await LoadSkills();
+    for (const skill of skills) {
+        const idx = stored.findIndex(s => s.name === skill.name && s.language === skill.language);
+        if (idx === -1) {
+            stored.push(skill);
         }
-        console.log(storedSkills);
-        promises_1.default.writeFile(storePath, JSON.stringify(storedSkills));
+        else {
+            // Accumulate evidence: keep the highest confidence seen across scans.
+            // If the new scan raises confidence enough to graduate to Knows, promote.
+            const prev = stored[idx];
+            const newConfidence = Math.max(prev.confidence, skill.confidence);
+            const newCount = prev.usageCount + skill.usageCount;
+            stored[idx] = {
+                ...prev,
+                confidence: newConfidence,
+                usageCount: newCount,
+                level: newConfidence >= 60 ? types_1.SkillLevel.Knows : types_1.SkillLevel.Learning,
+            };
+        }
     }
-    catch (error) {
-        return;
-    }
-    return;
+    await promises_1.default.writeFile(STORE_PATH, JSON.stringify(stored, null, 2));
 }
-// const skills = [
-//     { "name": "Async/Await", "desc": "async ", "level": 3 },
-//     { "name": "Arrow Functions", "desc": "=>", "level": 0 },
-//     { "name": "TypeScript Types", "desc": "interface ", "level": 0 },
-//     { "name": "Destructuring", "desc": "const {", "level": 1 },
-//     { "name": "Express Routes", "desc": "app.get(", "level": 1 }
-// ];
-// LoadSkills();
-// saveSkills(skills);
-// LoadSkills();
 //# sourceMappingURL=index.js.map

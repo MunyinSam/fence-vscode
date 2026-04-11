@@ -1,71 +1,47 @@
-# fence README
+# Fence
 
-This is the README for your extension "fence". After writing up a brief description, we recommend including the following sections.
+**Keep AI in learning mode.** Fence scans your code, figures out what you already know, and writes a `CLAUDE.md` file that instructs Claude to teach rather than just hand you answers.
+
+## How it works
+
+1. Run **Fence: Init** in any project
+2. Fence scans your code files and detects which patterns and skills you actually use
+3. It writes a `CLAUDE.md` at the project root
+4. Claude reads that file and adjusts — explaining concepts you're still learning instead of writing the code for you
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+- Detects skills across **8 languages**: JavaScript, TypeScript, React, Python, Go, Java, C#, Rust, Ruby, PHP
+- Confidence scoring — distinguishes *Expert* from *Familiar* based on how often you use a pattern
+- Accumulates knowledge across multiple projects (stored in `~/.fence/skills.json`)
+- Skills grouped by language in the generated `CLAUDE.md`
 
-For example if there is an image subfolder under your extension project workspace:
+## Usage
 
-\!\[feature X\]\(images/feature-x.png\)
+Open any project in VS Code and run the command:
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+- **Command Palette** (`Ctrl+Shift+P`): `Fence: Init`
+- **Keyboard shortcut**: `Ctrl+Shift+F` (Mac: `Cmd+Shift+F`)
+
+A `CLAUDE.md` file will be created or updated at your project root.
+
+## Example output
+
+```markdown
+## What I Already Know
+### TypeScript
+- Async / Await (Expert)
+- TypeScript Interfaces & Types (Proficient)
+
+## What I'm Still Learning
+### JavaScript/TypeScript
+- Error Handling
+- Promises
+```
+
+Claude will freely use skills you know, but will guide you through the ones you're still learning.
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
-
-## Extension Settings
-
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
-This extension contributes the following settings:
-
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
-
-## Known Issues
-
-Calling out known issues can help limit users opening duplicate issues against your extension.
-
-## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+- VS Code 1.115.0 or higher
+- A project with source files (`.ts`, `.js`, `.py`, `.go`, `.java`, `.cs`, `.rs`, `.rb`, or `.php`)
