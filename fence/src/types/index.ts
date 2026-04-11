@@ -7,8 +7,9 @@ export interface Skill {
     name: string
     language: string
     level: SkillLevel
-    confidence: number   // 0–100
+    confidence: number   // 0–100, raw stored value
     usageCount: number
+    lastSeenAt: string   // ISO date string
 }
 
 export interface DetectionRule {

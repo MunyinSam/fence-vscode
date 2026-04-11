@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import * as path from 'path';
 import { DetectionRule, Skill, SkillLevel } from '../types';
+import { analyzeTypeScript, ASTCounts } from './ast';
 
 // ---------------------------------------------------------------------------
 // Detection rules — one entry per skill, per language.
@@ -443,7 +444,7 @@ function ext(filePath: string): string {
  * avgPerFile = 1 → ~50 %, avgPerFile = 3 → ~79 %, avgPerFile = 7 → ~100 %
  */
 function confidence(totalCount: number, relevantFileCount: number, weight: number): number {
-    if (totalCount === 0) return 0;
+    if (totalCount === 0) { return 0; }
     const avg = (totalCount * weight) / Math.max(relevantFileCount, 1);
     return Math.min(100, Math.round(Math.log2(avg + 1) * 50));
 }
@@ -493,35 +494,83 @@ export async function detect(projectPath: string): Promise<Skill[]> {
         filesContent.push(...results);
     }
 
+    const TS_EXTS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
+    const tsFiles  = filesContent.filter(f => TS_EXTS.has(f.ext));
+
+    // ── AST pass for TypeScript/JavaScript files ───────────────────────────
+    // Accumulate counts across all TS/JS files keyed by skill name
+    const astTotals: ASTCounts = {};
+    for (const f of tsFiles) {
+        const counts = analyzeTypeScript(f.text, f.file);
+        for (const [skill, count] of Object.entries(counts)) {
+            astTotals[skill] = (astTotals[skill] ?? 0) + count;
+        }
+    }
+
+    const now = new Date().toISOString();
     const results: Skill[] = [];
 
-    for (const rule of RULES) {
-        const relevantFiles = filesContent.filter(f => rule.fileTypes.includes(f.ext));
-        if (relevantFiles.length === 0) continue;
+    // ── Emit AST-derived skills (TS/JS only) ──────────────────────────────
+    const AST_SKILL_META: Record<string, { language: string; weight: number }> = {
+        'Async / Await':                 { language: 'JavaScript/TypeScript', weight: 2 },
+        'Arrow Functions':               { language: 'JavaScript/TypeScript', weight: 1 },
+        'Destructuring':                 { language: 'JavaScript/TypeScript', weight: 1 },
+        'TypeScript Interfaces & Types': { language: 'TypeScript',            weight: 2 },
+        'TypeScript Generics':           { language: 'TypeScript',            weight: 3 },
+        'Classes & OOP':                 { language: 'JavaScript/TypeScript', weight: 2 },
+        'Error Handling':                { language: 'JavaScript/TypeScript', weight: 1 },
+        'Promises':                      { language: 'JavaScript/TypeScript', weight: 2 },
+        'ES Modules':                    { language: 'JavaScript/TypeScript', weight: 1 },
+        'Array Methods':                 { language: 'JavaScript/TypeScript', weight: 1 },
+        'React Hooks':                   { language: 'React',                 weight: 2 },
+        'React Components (JSX)':        { language: 'React',                 weight: 1 },
+    };
 
-        // Compile all patterns once per rule
+    for (const [skillName, meta] of Object.entries(AST_SKILL_META)) {
+        const total = astTotals[skillName] ?? 0;
+        if (total === 0) {continue;}
+        const score = confidence(total, tsFiles.length, meta.weight);
+        results.push({
+            name: skillName,
+            language: meta.language,
+            level: score >= 60 ? SkillLevel.Knows : SkillLevel.Learning,
+            confidence: score,
+            usageCount: total,
+            lastSeenAt: now,
+        });
+    }
+
+    // ── Regex pass for all other languages ────────────────────────────────
+    const NON_TS_RULES = RULES.filter(r =>
+        !r.fileTypes.every(ft => TS_EXTS.has(ft))
+    );
+
+    for (const rule of NON_TS_RULES) {
+        const relevantFiles = filesContent.filter(f =>
+            rule.fileTypes.includes(f.ext) && !TS_EXTS.has(f.ext)
+        );
+        if (relevantFiles.length === 0) {continue;}
+
         const regexes = rule.patterns.map(p => new RegExp(p, 'gim'));
-
         let totalCount = 0;
         for (const f of relevantFiles) {
             for (const re of regexes) {
                 re.lastIndex = 0;
                 const matches = f.text.match(re);
-                if (matches) totalCount += matches.length;
+                if (matches) {totalCount += matches.length;}
             }
         }
 
-        if (totalCount === 0) continue;
+        if (totalCount === 0) {continue;}
 
         const score = confidence(totalCount, relevantFiles.length, rule.weight);
-        const level = score >= 60 ? SkillLevel.Knows : SkillLevel.Learning;
-
         results.push({
             name: rule.name,
             language: rule.language,
-            level,
+            level: score >= 60 ? SkillLevel.Knows : SkillLevel.Learning,
             confidence: score,
             usageCount: totalCount,
+            lastSeenAt: now,
         });
     }
 
