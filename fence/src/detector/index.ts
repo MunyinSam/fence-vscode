@@ -452,11 +452,23 @@ function confidence(totalCount: number, relevantFileCount: number, weight: numbe
 // Main
 // ---------------------------------------------------------------------------
 
+const IGNORED_DIRS = new Set([
+    'node_modules', 'dist', 'out', 'build', '.git', '.svn',
+    'coverage', '.next', '.nuxt', '.cache', 'vendor', '__pycache__',
+    'target', 'bin', '.venv', 'venv', 'env',
+]);
+
+function isIgnored(filePath: string): boolean {
+    return filePath.split(/[\\/]/).some(segment => IGNORED_DIRS.has(segment));
+}
+
 export async function detect(projectPath: string): Promise<Skill[]> {
     const allEntries = await fs.readdir(projectPath, { recursive: true });
 
     const SUPPORTED = new Set(['.ts', '.js', '.tsx', '.jsx', '.mjs', '.cjs', '.py', '.go', '.java', '.cs', '.rs', '.rb', '.php']);
-    const codeFiles = (allEntries as string[]).filter(f => SUPPORTED.has(ext(f)));
+    const codeFiles = (allEntries as string[]).filter(f =>
+        SUPPORTED.has(ext(f)) && !isIgnored(f)
+    );
 
     const withStats = await Promise.all(
         codeFiles.map(async f => ({
@@ -465,15 +477,21 @@ export async function detect(projectPath: string): Promise<Skill[]> {
         }))
     );
 
-    const filesContent = await Promise.all(
-        withStats
-            .filter(f => f.stat.isFile())
-            .map(async f => ({
+    // Read files sequentially in batches to avoid EMFILE (too many open files)
+    const validFiles = withStats.filter(f => f.stat.isFile());
+    const filesContent: { file: string; ext: string; text: string }[] = [];
+    const BATCH_SIZE = 20;
+    for (let i = 0; i < validFiles.length; i += BATCH_SIZE) {
+        const batch = validFiles.slice(i, i + BATCH_SIZE);
+        const results = await Promise.all(
+            batch.map(async f => ({
                 file: f.file,
                 ext: ext(f.file),
                 text: await fs.readFile(path.join(projectPath, f.file), 'utf-8'),
             }))
-    );
+        );
+        filesContent.push(...results);
+    }
 
     const results: Skill[] = [];
 
