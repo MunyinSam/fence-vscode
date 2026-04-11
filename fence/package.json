@@ -27,6 +27,7 @@
         }
     ]
   },
+  "categories": ["AI", "Education", "Other"],
   "publisher": "MunyinSam",
   "activationEvents": ["onStartupFinished"],
   "devDependencies": {

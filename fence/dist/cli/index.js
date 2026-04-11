@@ -9,8 +9,8 @@ const program = new commander_1.Command();
 program
     .command('init')
     .description('Scan project and create CLAUDE.md')
-    .argument('<path>', 'path to project', process.cwd())
-    .action(async (projectPath) => {
+    .argument('[path]', 'path to project (defaults to current directory)')
+    .action(async (projectPath = process.cwd()) => {
     const detected = await (0, detector_1.detect)(projectPath);
     await (0, store_1.saveSkills)(detected); // merge into global store
     const allSkills = await (0, store_1.LoadSkills)(); // get accumulated skills

@@ -1,15 +1,20 @@
 export enum SkillLevel {
-    Knows, Learning
+    Knows,    // 0
+    Learning  // 1
 }
 
 export interface Skill {
     name: string
-    desc: string
+    language: string
     level: SkillLevel
+    confidence: number   // 0–100
+    usageCount: number
 }
 
 export interface DetectionRule {
     name: string
-    pattern: string
+    language: string
+    patterns: string[]   // regex pattern strings (case-insensitive applied per file)
     fileTypes: string[]
+    weight: number       // 1–3; higher = stronger signal per match
 }
