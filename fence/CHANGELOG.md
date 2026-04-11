@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.6]
+
+- Fixed dist issues.
+
 ## [1.0.5]
 
 - AST-based skill detection for TypeScript/JavaScript using the TypeScript compiler API
