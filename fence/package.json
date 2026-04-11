@@ -3,7 +3,6 @@
   "description": "Keep AI in learning mode. Fence integrates with Claude Code and limits it",
   "version": "1.0.2",
   "main": "./dist/extension.js",
-  "files": ["dist", "bin"],
   "engines": { "node": ">=18", "vscode": "^1.115.0" },
   "bin": {
     "fence": "./bin/fence.js"
@@ -27,6 +26,7 @@
         }
     ]
   },
+  "repository": { "type": "git", "url": "https://github.com/MunyinSam/fence-vscode" },
   "categories": ["AI", "Education", "Other"],
   "publisher": "MunyinSam",
   "activationEvents": ["onStartupFinished"],
