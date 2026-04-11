@@ -3,7 +3,7 @@
   "description": "Keep AI in learning mode. Fence integrates with Claude Code and limits it",
   "version": "1.0.5",
   "main": "./dist/extension.js",
-  "engines": { "node": ">=18", "vscode": "^1.100.0" },
+  "engines": { "node": ">=18", "vscode": "^1.115.0" },
   "bin": {
     "fence": "./bin/fence.js"
   },
