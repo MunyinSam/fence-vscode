@@ -6,14 +6,18 @@ const types_1 = require("../types");
 // Helpers
 // ---------------------------------------------------------------------------
 function confidenceLabel(c) {
-    if (c >= 90)
+    if (c >= 90) {
         return 'Expert';
-    if (c >= 75)
+    }
+    if (c >= 75) {
         return 'Proficient';
-    if (c >= 60)
+    }
+    if (c >= 60) {
         return 'Comfortable';
-    if (c >= 40)
+    }
+    if (c >= 40) {
         return 'Familiar';
+    }
     return 'Exploring';
 }
 function groupByLanguage(skills) {

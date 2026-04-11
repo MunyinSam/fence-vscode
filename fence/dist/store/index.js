@@ -43,7 +43,21 @@ const promises_1 = __importDefault(require("node:fs/promises"));
 const node_os_1 = __importDefault(require("node:os"));
 const path = __importStar(require("path"));
 const STORE_PATH = path.join(node_os_1.default.homedir(), '.fence', 'skills.json');
-/** Migrate a raw JSON entry from the old format (had `desc`, numeric level) */
+// ---------------------------------------------------------------------------
+// Decay
+// ---------------------------------------------------------------------------
+// Confidence loses ~0.5% per day of inactivity.
+// After 30 days  → ~86% of original
+// After 90 days  → ~64%  (may drop from Knows to Learning)
+// After 180 days → ~41%
+const DECAY_RATE = 0.005;
+function decayedConfidence(storedConfidence, lastSeenAt) {
+    const days = (Date.now() - new Date(lastSeenAt).getTime()) / 86_400_000;
+    return Math.round(storedConfidence * Math.pow(1 - DECAY_RATE, days));
+}
+// ---------------------------------------------------------------------------
+// Migration
+// ---------------------------------------------------------------------------
 function migrate(raw) {
     return {
         name: String(raw.name ?? ''),
@@ -51,36 +65,55 @@ function migrate(raw) {
         level: raw.level === 0 || raw.level === types_1.SkillLevel.Knows ? types_1.SkillLevel.Knows : types_1.SkillLevel.Learning,
         confidence: typeof raw.confidence === 'number' ? raw.confidence : (raw.level === 0 ? 70 : 30),
         usageCount: typeof raw.usageCount === 'number' ? raw.usageCount : 0,
+        lastSeenAt: typeof raw.lastSeenAt === 'string' ? raw.lastSeenAt : new Date().toISOString(),
     };
 }
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+/** Load skills and apply decay so returned confidence reflects inactivity. */
 async function LoadSkills() {
     try {
         const raw = await promises_1.default.readFile(STORE_PATH, 'utf-8');
         const parsed = JSON.parse(raw);
-        return parsed.map(migrate);
+        return parsed.map(entry => {
+            const skill = migrate(entry);
+            const effective = decayedConfidence(skill.confidence, skill.lastSeenAt);
+            return {
+                ...skill,
+                confidence: effective,
+                level: effective >= 60 ? types_1.SkillLevel.Knows : types_1.SkillLevel.Learning,
+            };
+        });
     }
     catch {
         return [];
     }
 }
+/** Merge a fresh scan into the global store. */
 async function saveSkills(skills) {
     await promises_1.default.mkdir(path.dirname(STORE_PATH), { recursive: true });
-    const stored = await LoadSkills();
+    // Load raw stored skills without decay so we don't double-decay
+    let stored = [];
+    try {
+        const raw = await promises_1.default.readFile(STORE_PATH, 'utf-8');
+        stored = JSON.parse(raw).map(migrate);
+    }
+    catch { /* first run */ }
     for (const skill of skills) {
         const idx = stored.findIndex(s => s.name === skill.name && s.language === skill.language);
         if (idx === -1) {
             stored.push(skill);
         }
         else {
-            // Accumulate evidence: keep the highest confidence seen across scans.
-            // If the new scan raises confidence enough to graduate to Knows, promote.
             const prev = stored[idx];
+            // New scan refreshes lastSeenAt and boosts confidence
             const newConfidence = Math.max(prev.confidence, skill.confidence);
-            const newCount = prev.usageCount + skill.usageCount;
             stored[idx] = {
                 ...prev,
                 confidence: newConfidence,
-                usageCount: newCount,
+                usageCount: prev.usageCount + skill.usageCount,
+                lastSeenAt: skill.lastSeenAt, // reset the decay clock
                 level: newConfidence >= 60 ? types_1.SkillLevel.Knows : types_1.SkillLevel.Learning,
             };
         }

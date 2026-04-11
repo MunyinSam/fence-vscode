@@ -5,10 +5,10 @@ import { Skill, SkillLevel } from '../types';
 // ---------------------------------------------------------------------------
 
 function confidenceLabel(c: number): string {
-    if (c >= 90) return 'Expert';
-    if (c >= 75) return 'Proficient';
-    if (c >= 60) return 'Comfortable';
-    if (c >= 40) return 'Familiar';
+    if (c >= 90) {return 'Expert';}
+    if (c >= 75) {return 'Proficient';}
+    if (c >= 60) {return 'Comfortable';}
+    if (c >= 40) {return 'Familiar';}
     return 'Exploring';
 }
 
