@@ -8,6 +8,7 @@
     "fence": "./bin/fence.js"
   },
   "scripts": {
+    "vscode:prepublish": "npm run build",
     "build": "tsc -p ./",
     "dev": "ts-node src/cli/index.ts",
     "lint": "eslint src --max-warnings 0"
