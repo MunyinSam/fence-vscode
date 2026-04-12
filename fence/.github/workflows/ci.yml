@@ -28,8 +28,11 @@ jobs:
       - name: Lint
         run: npx eslint src --max-warnings 0
 
-      - name: Build
+      - name: Type check (strict)
         run: npm run build
+
+      - name: Bundle
+        run: npm run bundle
 
       - name: Verify dist was produced
         run: |
