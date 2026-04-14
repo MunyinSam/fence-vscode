@@ -8,7 +8,7 @@ can calibrate its responses to my actual knowledge level.
 ### JavaScript/TypeScript
 - Async / Await *(Expert)*
 - Arrow Functions *(Expert)*
-- ES Modules *(Proficient)*
+- ES Modules *(Expert)*
 - Destructuring *(Proficient)*
 
 ### TypeScript
