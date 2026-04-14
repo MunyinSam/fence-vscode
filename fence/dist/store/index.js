@@ -56,6 +56,14 @@ function decayedConfidence(storedConfidence, lastSeenAt) {
     return Math.round(storedConfidence * Math.pow(1 - DECAY_RATE, days));
 }
 // ---------------------------------------------------------------------------
+// Edit bonus
+// ---------------------------------------------------------------------------
+// Each save event that includes a skill boosts confidence slightly.
+// log2 scale so early saves matter most: 1 save → +7, 5 saves → +15 (cap).
+function editBonus(editCount) {
+    return Math.min(15, Math.round(Math.log2(editCount + 1) * 7));
+}
+// ---------------------------------------------------------------------------
 // Migration
 // ---------------------------------------------------------------------------
 function migrate(raw) {
@@ -65,20 +73,24 @@ function migrate(raw) {
         level: raw.level === 0 || raw.level === types_1.SkillLevel.Knows ? types_1.SkillLevel.Knows : types_1.SkillLevel.Learning,
         confidence: typeof raw.confidence === 'number' ? raw.confidence : (raw.level === 0 ? 70 : 30),
         usageCount: typeof raw.usageCount === 'number' ? raw.usageCount : 0,
+        editCount: typeof raw.editCount === 'number' ? raw.editCount : 0,
         lastSeenAt: typeof raw.lastSeenAt === 'string' ? raw.lastSeenAt : new Date().toISOString(),
     };
 }
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
-/** Load skills and apply decay so returned confidence reflects inactivity. */
+/** Load skills, apply decay, and apply edit bonus so confidence reflects
+ *  both inactivity and how often the user has actively worked on each skill. */
 async function LoadSkills() {
     try {
         const raw = await promises_1.default.readFile(STORE_PATH, 'utf-8');
         const parsed = JSON.parse(raw);
         return parsed.map(entry => {
             const skill = migrate(entry);
-            const effective = decayedConfidence(skill.confidence, skill.lastSeenAt);
+            const decayed = decayedConfidence(skill.confidence, skill.lastSeenAt);
+            const bonus = editBonus(skill.editCount);
+            const effective = Math.min(100, decayed + bonus);
             return {
                 ...skill,
                 confidence: effective,
@@ -90,7 +102,9 @@ async function LoadSkills() {
         return [];
     }
 }
-/** Merge a fresh scan into the global store. */
+/** Merge a fresh scan into the global store.
+ *  Each call increments editCount by 1 for every skill found in the scan,
+ *  representing one save event (or one manual init run) of observed evidence. */
 async function saveSkills(skills) {
     await promises_1.default.mkdir(path.dirname(STORE_PATH), { recursive: true });
     // Load raw stored skills without decay so we don't double-decay
@@ -103,16 +117,16 @@ async function saveSkills(skills) {
     for (const skill of skills) {
         const idx = stored.findIndex(s => s.name === skill.name && s.language === skill.language);
         if (idx === -1) {
-            stored.push(skill);
+            stored.push({ ...skill, editCount: 1 });
         }
         else {
             const prev = stored[idx];
-            // New scan refreshes lastSeenAt and boosts confidence
             const newConfidence = Math.max(prev.confidence, skill.confidence);
             stored[idx] = {
                 ...prev,
                 confidence: newConfidence,
                 usageCount: prev.usageCount + skill.usageCount,
+                editCount: prev.editCount + 1, // each merge = one more save event
                 lastSeenAt: skill.lastSeenAt, // reset the decay clock
                 level: newConfidence >= 60 ? types_1.SkillLevel.Knows : types_1.SkillLevel.Learning,
             };

@@ -9,6 +9,7 @@ export interface Skill {
     level: SkillLevel
     confidence: number   // 0–100, raw stored value
     usageCount: number
+    editCount: number    // number of save events that contributed to this skill
     lastSeenAt: string   // ISO date string
 }
 
