@@ -32,12 +32,22 @@ function groupByLanguage(skills) {
 // ---------------------------------------------------------------------------
 // Generator
 // ---------------------------------------------------------------------------
-function generate(skills) {
+/**
+ * @param skills        Full skill list loaded from the store.
+ * @param stressedSkills  Skill names that currently have active diagnostic
+ *                        errors in the editor. These are forced into the
+ *                        "Still Learning" section regardless of stored score.
+ */
+function generate(skills, stressedSkills = new Set()) {
     if (skills.length === 0) {
         return `## Purpose\n\nNo skills detected yet. Run \`fence init\` inside a project directory.\n`;
     }
-    const known = skills.filter(s => s.level === types_1.SkillLevel.Knows);
-    const learning = skills.filter(s => s.level === types_1.SkillLevel.Learning);
+    // Force any skill under active diagnostic pressure to Learning level
+    const adjusted = skills.map(s => stressedSkills.has(s.name)
+        ? { ...s, level: types_1.SkillLevel.Learning }
+        : s);
+    const known = adjusted.filter(s => s.level === types_1.SkillLevel.Knows);
+    const learning = adjusted.filter(s => s.level === types_1.SkillLevel.Learning);
     const knownByLang = groupByLanguage(known);
     const learningByLang = groupByLanguage(learning);
     // ── Known section ──────────────────────────────────────────────────────
@@ -53,7 +63,8 @@ function generate(skills) {
     for (const [lang, list] of learningByLang) {
         learningSection += `\n### ${lang}\n`;
         for (const s of list.sort((a, b) => b.confidence - a.confidence)) {
-            learningSection += `- ${s.name}\n`;
+            const stressNote = stressedSkills.has(s.name) ? ' *(active errors)*' : '';
+            learningSection += `- ${s.name}${stressNote}\n`;
         }
     }
     // ── Learning-specific rules ────────────────────────────────────────────

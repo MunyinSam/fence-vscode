@@ -41,6 +41,7 @@ const promises_1 = __importDefault(require("node:fs/promises"));
 const path = __importStar(require("path"));
 const types_1 = require("../types");
 const ast_1 = require("./ast");
+const git_1 = require("../git");
 // ---------------------------------------------------------------------------
 // Detection rules — one entry per skill, per language.
 // patterns are regex strings; all are tested case-insensitively.
@@ -467,15 +468,28 @@ function ext(filePath) {
     return i !== -1 ? filePath.slice(i).toLowerCase() : '';
 }
 /**
- * Confidence score on a log2 scale.
- * avgPerFile = 1 → ~50 %, avgPerFile = 3 → ~79 %, avgPerFile = 7 → ~100 %
+ * Multi-signal confidence score combining frequency, breadth, and diversity.
+ *
+ * freqScore    — how intensely the skill appears per file (log-scaled)
+ * breadthScore — what fraction of relevant files contain the skill
+ * diversityScore — how many of the rule's patterns fired (0 for AST pass)
+ *
+ * When totalPatterns === 0 (AST pass, no explicit patterns), only freq + breadth
+ * are used with adjusted weights.
  */
-function confidence(totalCount, relevantFileCount, weight) {
+function confidence(totalCount, fileCount, weight, filesWithSkill, patternsHit = 0, totalPatterns = 0) {
     if (totalCount === 0) {
         return 0;
     }
-    const avg = (totalCount * weight) / Math.max(relevantFileCount, 1);
-    return Math.min(100, Math.round(Math.log2(avg + 1) * 50));
+    const avg = (totalCount * weight) / Math.max(fileCount, 1);
+    const freqScore = Math.min(100, Math.log2(avg + 1) * 50);
+    const breadthScore = (filesWithSkill / Math.max(fileCount, 1)) * 100;
+    if (totalPatterns === 0) {
+        // AST pass: no pattern diversity signal
+        return Math.min(100, Math.round(freqScore * 0.65 + breadthScore * 0.35));
+    }
+    const diversityScore = (patternsHit / totalPatterns) * 100;
+    return Math.min(100, Math.round(freqScore * 0.5 + breadthScore * 0.3 + diversityScore * 0.2));
 }
 // ---------------------------------------------------------------------------
 // Main
@@ -488,15 +502,35 @@ const IGNORED_DIRS = new Set([
 function isIgnored(filePath) {
     return filePath.split(/[\\/]/).some(segment => IGNORED_DIRS.has(segment));
 }
-async function detect(projectPath) {
-    const allEntries = await promises_1.default.readdir(projectPath, { recursive: true });
-    const SUPPORTED = new Set(['.ts', '.js', '.tsx', '.jsx', '.mjs', '.cjs', '.py', '.go', '.java', '.cs', '.rs', '.rb', '.php']);
-    const codeFiles = allEntries.filter(f => SUPPORTED.has(ext(f)) && !isIgnored(f));
+const SUPPORTED = new Set(['.ts', '.js', '.tsx', '.jsx', '.mjs', '.cjs', '.py', '.go', '.java', '.cs', '.rs', '.rb', '.php']);
+const TS_EXTS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
+/**
+ * Scan a project (or a single file) and return detected skills.
+ *
+ * @param projectPath  Absolute path to the workspace root.
+ * @param singleFile   Absolute path to a single file to scan (e.g. from a
+ *                     save event). When provided, git blame is skipped and
+ *                     only that file is read. The caller is the author.
+ */
+async function detect(projectPath, singleFile) {
+    // ── Resolve file list ──────────────────────────────────────────────────
+    let codeFiles; // paths relative to projectPath
+    if (singleFile) {
+        const rel = path.relative(projectPath, singleFile).replace(/\\/g, '/');
+        if (isIgnored(rel) || !SUPPORTED.has(ext(singleFile))) {
+            return [];
+        }
+        codeFiles = [rel];
+    }
+    else {
+        const allEntries = await promises_1.default.readdir(projectPath, { recursive: true });
+        codeFiles = allEntries.filter(f => SUPPORTED.has(ext(f)) && !isIgnored(f));
+    }
+    // ── Read file contents in batches ──────────────────────────────────────
     const withStats = await Promise.all(codeFiles.map(async (f) => ({
         file: f,
         stat: await promises_1.default.stat(path.join(projectPath, f)),
     })));
-    // Read files sequentially in batches to avoid EMFILE (too many open files)
     const validFiles = withStats.filter(f => f.stat.isFile());
     const filesContent = [];
     const BATCH_SIZE = 20;
@@ -509,20 +543,40 @@ async function detect(projectPath) {
         })));
         filesContent.push(...results);
     }
-    const TS_EXTS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
-    const tsFiles = filesContent.filter(f => TS_EXTS.has(f.ext));
-    // ── AST pass for TypeScript/JavaScript files ───────────────────────────
-    // Accumulate counts across all TS/JS files keyed by skill name
-    const astTotals = {};
-    for (const f of tsFiles) {
-        const counts = (0, ast_1.analyzeTypeScript)(f.text, f.file);
-        for (const [skill, count] of Object.entries(counts)) {
-            astTotals[skill] = (astTotals[skill] ?? 0) + count;
+    // ── Git blame setup (full scan only) ──────────────────────────────────
+    // On single-file scans (save events) the current user just wrote the file,
+    // so blame is not needed. On full scans we filter to lines the user authored.
+    let userEmail = null;
+    let myCommittedFiles = new Set();
+    if (!singleFile) {
+        userEmail = await (0, git_1.getCurrentUserEmail)(projectPath);
+        if (userEmail) {
+            myCommittedFiles = await (0, git_1.getMyCommittedFiles)(projectPath, userEmail);
         }
     }
     const now = new Date().toISOString();
     const results = [];
-    // ── Emit AST-derived skills (TS/JS only) ──────────────────────────────
+    // ── AST pass — TypeScript / JavaScript ────────────────────────────────
+    // Apply file-level attribution: only scan TS/JS files the user has
+    // committed to (or all files when git info is unavailable).
+    const tsFiles = filesContent.filter(f => TS_EXTS.has(f.ext));
+    const tsFilesToScan = (userEmail && myCommittedFiles.size > 0)
+        ? tsFiles.filter(f => {
+            const norm = f.file.replace(/\\/g, '/');
+            return myCommittedFiles.has(f.file) || myCommittedFiles.has(norm);
+        })
+        : tsFiles;
+    const astTotals = {};
+    const astBreadth = {}; // skill → files with ≥1 hit
+    for (const f of tsFilesToScan) {
+        const counts = (0, ast_1.analyzeTypeScript)(f.text, f.file);
+        for (const [skill, count] of Object.entries(counts)) {
+            astTotals[skill] = (astTotals[skill] ?? 0) + count;
+            if (count > 0) {
+                astBreadth[skill] = (astBreadth[skill] ?? 0) + 1;
+            }
+        }
+    }
     const AST_SKILL_META = {
         'Async / Await': { language: 'JavaScript/TypeScript', weight: 2 },
         'Arrow Functions': { language: 'JavaScript/TypeScript', weight: 1 },
@@ -542,44 +596,69 @@ async function detect(projectPath) {
         if (total === 0) {
             continue;
         }
-        const score = confidence(total, tsFiles.length, meta.weight);
+        const score = confidence(total, tsFilesToScan.length, meta.weight, astBreadth[skillName] ?? 0);
         results.push({
             name: skillName,
             language: meta.language,
             level: score >= 60 ? types_1.SkillLevel.Knows : types_1.SkillLevel.Learning,
             confidence: score,
             usageCount: total,
+            editCount: 0, // incremented by saveSkills on each save event
             lastSeenAt: now,
         });
     }
-    // ── Regex pass for all other languages ────────────────────────────────
+    // ── Regex pass — all other languages ──────────────────────────────────
+    // Applies per-line git blame filtering: only counts matches on lines
+    // authored by the current user. Falls back to counting all lines when
+    // git is unavailable or the file is not yet committed.
     const NON_TS_RULES = RULES.filter(r => !r.fileTypes.every(ft => TS_EXTS.has(ft)));
     for (const rule of NON_TS_RULES) {
         const relevantFiles = filesContent.filter(f => rule.fileTypes.includes(f.ext) && !TS_EXTS.has(f.ext));
         if (relevantFiles.length === 0) {
             continue;
         }
-        const regexes = rule.patterns.map(p => new RegExp(p, 'gim'));
+        const regexes = rule.patterns.map(p => new RegExp(p, 'gi'));
         let totalCount = 0;
+        let filesWithSkill = 0;
+        const distinctPatternsFired = new Set();
         for (const f of relevantFiles) {
-            for (const re of regexes) {
-                re.lastIndex = 0;
-                const matches = f.text.match(re);
-                if (matches) {
-                    totalCount += matches.length;
+            // Per-line blame: null means file is untracked → treat all lines as owned
+            const myLines = userEmail
+                ? await (0, git_1.getMyLineNumbers)(f.file, projectPath, userEmail)
+                : null;
+            const fileLines = f.text.split('\n');
+            let fileHits = 0;
+            for (let pi = 0; pi < regexes.length; pi++) {
+                const re = regexes[pi];
+                for (let li = 0; li < fileLines.length; li++) {
+                    // Skip lines not authored by the current user (null = all owned)
+                    if (myLines !== null && !myLines.has(li + 1)) {
+                        continue;
+                    }
+                    re.lastIndex = 0;
+                    const m = fileLines[li].match(re);
+                    if (m) {
+                        fileHits += m.length;
+                        distinctPatternsFired.add(pi);
+                    }
                 }
+            }
+            totalCount += fileHits;
+            if (fileHits > 0) {
+                filesWithSkill++;
             }
         }
         if (totalCount === 0) {
             continue;
         }
-        const score = confidence(totalCount, relevantFiles.length, rule.weight);
+        const score = confidence(totalCount, relevantFiles.length, rule.weight, filesWithSkill, distinctPatternsFired.size, rule.patterns.length);
         results.push({
             name: rule.name,
             language: rule.language,
             level: score >= 60 ? types_1.SkillLevel.Knows : types_1.SkillLevel.Learning,
             confidence: score,
             usageCount: totalCount,
+            editCount: 0,
             lastSeenAt: now,
         });
     }
