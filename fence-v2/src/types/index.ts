@@ -1,4 +1,4 @@
-interface SignalCounts {
+export interface SignalCounts {
 
     totalLines: number;
 
@@ -25,8 +25,18 @@ interface SignalCounts {
     emptyCatch: number;         // catch blocks that do nothing -- bad
 
     // modern syntax
-    asyncAwait: number;         // 
+    asyncAwait: number;         // async await count -- good
     varDeclarations: number;    // var usage -- bad
     callbackNesting: number;    // nested callbacks -- bad
 
+}
+
+export interface Scores {
+    idiomScore: number;
+    complexityScore: number;
+    abstractionScore: number;
+    errorHandlingScore: number;
+    modernSyntaxScore: number;
+    finalScore: number;      // 1–10
+    level: 'beginner' | 'elementary' | 'intermediate' | 'advanced' | 'expert';
 }
