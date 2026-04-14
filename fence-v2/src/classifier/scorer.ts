@@ -50,11 +50,9 @@ export function score(s: SignalCounts): Scores {
     // asyncFunctions: number;     // total async functions
     // handledAsync: number;       // async funcs with try/catch or .catch()
     // emptyCatch: number;         // catch blocks that do nothing -- bad
-
-    const errorScore = (s.handledAsync - s.emptyCatch ) / s.asyncFunctions;
+    
     const errorHandlingScore = s.asyncFunctions === 0 
-                                ? 0.5 : errorScore < 0 
-                                ? 0 : errorScore;
+                                ? 0.5 : Math.max(0, (s.handledAsync - s.emptyCatch ) / s.asyncFunctions)
 
     // modern syntax
 
