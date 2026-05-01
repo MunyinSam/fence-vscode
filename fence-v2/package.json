@@ -14,8 +14,8 @@
   "contributes": {
     "commands": [
       {
-        "command": "fence-v2.helloWorld",
-        "title": "Hello World"
+        "command": "fence.scan",
+        "title": "Fence: Scan Project"
       }
     ]
   },

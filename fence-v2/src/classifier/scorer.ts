@@ -31,7 +31,7 @@ export function score(s: SignalCounts): Scores {
     //                             // (the amount of branch in a func)
 
     const avgComplexity = s.functions === 0 ? 5.5 : s.totalComplexity / s.functions;
-    const complexityScore = Math.max(0, (10 - avgComplexity) / 9);
+    const complexityScore = Math.min(1, (10 - avgComplexity) / 9);
 
     // abstraction
 

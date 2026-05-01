@@ -3,7 +3,7 @@ import { readFile } from 'fs/promises';
 import { parse, simpleTraverse } from '@typescript-eslint/typescript-estree';
 
 // Promise<SignalCounts>
-export async function scanner(dir: string): Promise<any> {
+export async function scanner(dir: string): Promise<SignalCounts> {
     const fileContents = await readFile(dir, 'utf-8');
 
     const ast = parse(fileContents, { jsx: true });
@@ -39,6 +39,65 @@ export async function scanner(dir: string): Promise<any> {
         callbackNesting: 0,    // nested callbacks -- bad
     };
 
+    simpleTraverse(ast, {
+        enter(node) {
+            
+            if (node.type === 'ChainExpression') {
+                counts.optionalChaining++;
+            }
+            if (node.type === 'LogicalExpression' && node.operator === '??') {
+                counts.nullishCoalescing++;
+            }
+            if (node.type === 'VariableDeclaration' && node.kind === 'var') {
+                counts.varDeclarations++;
+            }
+            if (node.type === 'AwaitExpression') {
+                counts.asyncAwait++;
+            }
+            if (node.type === 'ObjectPattern' || node.type === 'ArrayPattern') {
+                counts.destructuring++;
+            }
+            if (node.type === 'ForStatement') {
+                counts.forLoopsOnArrays++;
+            }
+            if (node.type === 'FunctionDeclaration' || node.type === 'FunctionExpression' || node.type === 'ArrowFunctionExpression') {
+                counts.functions++;
+            }
+            if (node.type === 'TSTypeParameterDeclaration') {
+                counts.generics++;
+            }
+            if (node.type === 'TSInterfaceDeclaration' || node.type === 'TSTypeAliasDeclaration') {
+                counts.typeDefinitions++;
+            }
+            // Skip first
+            // if (node.type === 'FunctionExpression' || node.type === 'ArrowFunctionExpression') {
+            //     counts.callbackNesting++;
+            // }
+            if (node.type === 'CatchClause' && node.body.body.length === 0){
+                counts.emptyCatch++;
+            }
+            if (node.type === 'CallExpression' && 
+                node.callee.type === 'MemberExpression' &&
+                node.callee.property.type === 'Identifier' &&
+                ['map','filter','reduce','find','forEach','some','every'].includes(node.callee.property.name)) {
+                counts.arrayMethods++;
+            }
+            if (node.type === 'IfStatement' || node.type === 'ForStatement' ||
+                 node.type === 'WhileStatement' || node.type === 'ConditionalExpression' ||
+                node.type === 'SwitchCase' || (node.type === 'LogicalExpression' && (node.operator === '&&' || node.operator === '||'))) {
+                counts.totalComplexity++;                    
+            }
+            if ((node.type === 'FunctionDeclaration' || node.type === 'FunctionExpression' || node.type === 'ArrowFunctionExpression') && node.async === true) {
+                counts.asyncFunctions++;
+                if (node.body.type === 'BlockStatement' && node.body.body.some(statement => statement.type === 'TryStatement')) {
+                    counts.handledAsync++;
+                }
+            }
+
+    }});
+    console.log(counts);
+    return counts;
 }
 
-scanner('D:/Code/Personal/fence-vscode/fence-v2/src/classifier/scorer.ts')
+scanner('D:/Code/Personal/fence-vscode/fence-v2/src/test/demo.ts')
+scanner('D:/Code/Personal/fence-vscode/fence-v2/src/classifier/ast.ts')

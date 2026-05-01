@@ -9,18 +9,31 @@ can calibrate its responses to my actual knowledge level.
 - Async / Await *(Expert)*
 - Arrow Functions *(Expert)*
 - ES Modules *(Expert)*
-- Destructuring *(Proficient)*
+- Array Methods *(Expert)*
+- Promises *(Expert)*
+- Error Handling *(Proficient)*
+- Destructuring *(Comfortable)*
 
 ### TypeScript
 - TypeScript Interfaces & Types *(Expert)*
 
-### Java
-- Generics *(Comfortable)*
-
 ## What I'm Still Learning
 
-*(none detected yet)*
+### Java
+- Generics
 
+## Rules for Skills I'm Learning
+
+The following skills appear in my code but I haven't yet mastered them:
+**Generics**
+
+For any of these:
+1. Explain the concept — what it is and why it exists
+2. Give a guiding question or minimal hint
+3. Let me write the code
+4. Only after I've written it, help me fix or improve it
+
+If I ask you to "just write it", push back and ask what part I'm stuck on instead.
 ## Rules for Claude
 
 **Match my level — do not use patterns absent from "What I Already Know".**
