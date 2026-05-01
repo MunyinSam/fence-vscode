@@ -1,0 +1,38 @@
+{
+  "name": "fence-vscode",
+  "displayName": "Fence",
+  "description": "fence-vscode VS Code extension",
+  "version": "0.0.1",
+  "publisher": "MunyinSam",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "fence.helloWorld",
+        "title": "Fence: Hello World"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.118.0",
+    "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "simple-git": "^3.36.0",
+    "ts-morph": "^28.0.0"
+  }
+}
