@@ -1,47 +1,68 @@
 # Fence
 
-**Keep AI in learning mode.** Fence scans your code, figures out what you already know, and writes a `CLAUDE.md` file that instructs Claude to teach rather than just hand you answers.
+**Keep AI in learning mode.** Fence analyzes your TypeScript code, builds a skill profile from what you actually write, and generates a `CLAUDE.md` that tells Claude to teach — not just produce — the constructs you haven't mastered yet.
 
 ## How it works
 
-1. Run **Fence: Init** in any project
-2. Fence scans your code files and detects which patterns and skills you actually use
-3. It writes a `CLAUDE.md` at the project root
-4. Claude reads that file and adjusts — explaining concepts you're still learning instead of writing the code for you
+1. Run **Fence: Scan Workspace** in any TypeScript project
+2. Fence parses every `.ts`/`.tsx` file using a full AST scanner
+3. It scores your code across 7 dimensions and assigns you a tier (Novice → Expert)
+4. A `CLAUDE.md` is written listing your known and unknown constructs
+5. Claude reads that file and adjusts — freely using what you know, guiding you through what you don't
+6. On every subsequent file save, Fence re-scans and keeps the profile current
 
-## Features
+## Skill tiers
 
-- Detects skills across **8 languages**: JavaScript, TypeScript, React, Python, Go, Java, C#, Rust, Ruby, PHP
-- Confidence scoring — distinguishes *Expert* from *Familiar* based on how often you use a pattern
-- Accumulates knowledge across multiple projects (stored in `~/.fence/skills.json`)
-- Skills grouped by language in the generated `CLAUDE.md`
+| Tier | Label | What it signals |
+|------|-------|-----------------|
+| 1 | Novice | Basic types, simple interfaces, typed functions |
+| 2 | Elementary | Union types, optional chaining, nullish coalescing, destructuring |
+| 3 | Intermediate | Writing generics, type guards, async/await, higher-order functions |
+| 4 | Advanced | Conditional types, mapped types, constrained generics, template literal types |
+| 5 | Expert | Recursive types, variance annotations |
 
-## Usage
+## Scoring
 
-Open any project in VS Code and run the command:
+Fence measures presence across 7 dimensions (capped at 1 per file to reward breadth, not repetition):
 
-- **Command Palette** (`Ctrl+Shift+P`): `Fence: Init`
-- **Keyboard shortcut**: `Ctrl+Shift+F` (Mac: `Cmd+Shift+F`)
+- **Idioms** (30%) — patterns that show you write idiomatic TypeScript
+- **Complexity** (20%) — use of advanced constructs
+- **Abstraction** (20%) — generic design
+- **Error handling** (15%) — how consistently you handle failure paths
+- **Modern syntax** (15%) — adoption of newer language features
+- **Anti-pattern penalty** — `any`, `@ts-ignore`, unsafe assertions subtract from your score
+- **Concept fingerprints** — bonus detection for combinations like *Type Narrowing*, *Async Mastery*, *Type Safety*, and *Generic Design*
 
-A `CLAUDE.md` file will be created or updated at your project root.
+The final score (1–10) maps to a tier and drives what Claude will and won't generate for you.
 
-## Example output
+## Commands
 
-```markdown
-## What I Already Know
-### TypeScript
-- Async / Await (Expert)
-- TypeScript Interfaces & Types (Proficient)
+Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and run:
 
-## What I'm Still Learning
-### JavaScript/TypeScript
-- Error Handling
-- Promises
-```
+| Command | What it does |
+|---------|-------------|
+| `Fence: Scan Workspace` | Scan all `.ts`/`.tsx` files and build your profile |
+| `Fence: Show Profile` | Print your current profile and scores to the Output panel |
+| `Fence: Set Mode` | Switch between **learn** mode (Claude teaches unknown constructs) and **assist** mode (Claude only uses known constructs) |
+| `Fence: Reset Profile` | Delete all profile data and start fresh |
 
-Claude will freely use skills you know, but will guide you through the ones you're still learning.
+## Storage
+
+Profile data is saved to three files — `profile.json`, `signals.json`, and `history.json` — in one of three locations, configurable via VS Code settings:
+
+| Setting | Location |
+|---------|----------|
+| `home` (default) | `~/.fence/` |
+| `workspace` | `.fence/` in your project root (auto-added to `.gitignore`) |
+| `custom` | Any absolute path you specify |
+
+Configure under `fence.storageLocation` and `fence.customStoragePath`.
+
+## Live updates
+
+Fence watches for file saves. When you save a `.ts` or `.tsx` file, it debounces for 5 seconds, re-scans that file, re-aggregates the session cache, and rewrites `CLAUDE.md` — no manual re-scan needed.
 
 ## Requirements
 
 - VS Code 1.115.0 or higher
-- A project with source files (`.ts`, `.js`, `.py`, `.go`, `.java`, `.cs`, `.rs`, `.rb`, or `.php`)
+- A project containing `.ts` or `.tsx` files
