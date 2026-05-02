@@ -10,15 +10,33 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "workspaceContains:**/*.ts",
+    "workspaceContains:**/*.tsx"
+  ],
   "main": "./out/extension.js",
   "contributes": {
-    "commands": [
-      {
-        "command": "fence.helloWorld",
-        "title": "Fence: Hello World"
+    "configuration": {
+      "title": "Fence",
+      "properties": {
+        "fence.storageLocation": {
+          "type": "string",
+          "default": "home",
+          "enum": ["home", "workspace", "custom"],
+          "enumDescriptions": [
+            "Store in ~/.fence/ in your home directory (default, shared across projects)",
+            "Store in .fence/ inside the current workspace (per-project, added to .gitignore)",
+            "Store in a custom absolute path set via fence.customStoragePath"
+          ],
+          "description": "Where fence stores profile.json, signals.json, and history.json."
+        },
+        "fence.customStoragePath": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to use when fence.storageLocation is set to 'custom'. Supports ~ as home directory shorthand."
+        }
       }
-    ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
