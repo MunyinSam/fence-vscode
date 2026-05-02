@@ -1,0 +1,39 @@
+{
+  "scores": {
+    "idiomScore": 1,
+    "complexityScore": 1,
+    "abstractionScore": 0.9333333333333333,
+    "errorHandlingScore": 0,
+    "modernSyntaxScore": 0.8,
+    "antiPatternPenalty": -0.06999999999999999,
+    "finalScore": 7.366666666666667
+  },
+  "tier": 4,
+  "tierLabel": "advanced",
+  "knownConstructs": [
+    "basicTypes",
+    "simpleInterfaces",
+    "typedFunctions",
+    "unionTypes",
+    "consumingGenerics",
+    "optionalChaining",
+    "nullishCoalescing",
+    "destructuring",
+    "arrayMethods",
+    "asyncAwait",
+    "writingGenerics",
+    "typeGuards",
+    "discriminatedUnions",
+    "higherOrderFns",
+    "conditionalTypes",
+    "mappedTypes",
+    "constrainedGenerics"
+  ],
+  "unknownConstructs": [
+    "utilityTypes",
+    "inferKeyword",
+    "templateLiteralTypes",
+    "recursiveTypes",
+    "varianceAnnotations"
+  ]
+}
