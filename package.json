@@ -24,11 +24,14 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
+    "test": "npm run compile && node out/test/runScanner.js",
     "lint": "eslint src"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^20.19.39",
     "@types/vscode": "^1.118.0",
+    "mocha": "^11.7.5",
     "typescript": "^5.4.0"
   },
   "dependencies": {
