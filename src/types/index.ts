@@ -122,7 +122,7 @@ export interface Scores {
 
 export type Tier = 1 | 2 | 3 | 4 | 5;
 
-export type TierLabel = 'beginner' | 'basic' | 'intermediate' | 'advanced' | 'expert';
+export type TierLabel = 'novice' | 'elementary' | 'intermediate' | 'advanced' | 'expert';
 
 // profile.json — main output read by the CLAUDE.md writer and skill checker
 export interface SkillProfile {
