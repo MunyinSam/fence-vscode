@@ -1,15 +1,44 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import type { SkillProfile, AggregatedSignals, ScanHistory, HistoryEntry } from './types/index';
 import type { ScoringResult } from './scoring';
 
-const FENCE_DIR    = '.fence';
 const PROFILE_FILE = 'profile.json';
 const SIGNALS_FILE = 'signals.json';
 const HISTORY_FILE = 'history.json';
 
-// ── Workspace helpers ──────────────────────────────────────────────────────
+// ── Storage location ───────────────────────────────────────────────────────
+
+// Returns the directory where data files live, based on the user's setting.
+//
+//   home (default) → ~/.fence/
+//   workspace      → <workspaceRoot>/.fence/
+//   custom         → fence.customStoragePath (~ expanded)
+//
+// CLAUDE.md always goes to the workspace regardless — see claude-md.ts.
+
+export function getDataDir(): string {
+  const config   = vscode.workspace.getConfiguration('fence');
+  const location = config.get<string>('storageLocation', 'home');
+
+  switch (location) {
+    case 'workspace':
+      return path.join(getWorkspaceRoot(), '.fence');
+
+    case 'custom': {
+      const custom = config.get<string>('customStoragePath', '').trim();
+      if (!custom) return path.join(os.homedir(), '.fence'); // fallback if unset
+      return custom.startsWith('~')
+        ? path.join(os.homedir(), custom.slice(2))
+        : custom;
+    }
+
+    default: // 'home'
+      return path.join(os.homedir(), '.fence');
+  }
+}
 
 function getWorkspaceRoot(): string {
   const folders = vscode.workspace.workspaceFolders;
@@ -19,21 +48,26 @@ function getWorkspaceRoot(): string {
   return folders[0].uri.fsPath;
 }
 
-function getFenceDir(): string {
-  return path.join(getWorkspaceRoot(), FENCE_DIR);
-}
+// Creates the data directory if needed.
+// Also adds .fence/ to .gitignore when using workspace storage so the
+// data files don't get committed.
+function ensureDataDir(): void {
+  const dataDir = getDataDir();
 
-// Called before any write. Creates .fence/ and adds it to .gitignore.
-// Safe to call multiple times — checks existence before acting.
-function ensureFenceDir(): void {
-  const fenceDir = getFenceDir();
-
-  if (!fs.existsSync(fenceDir)) {
-    fs.mkdirSync(fenceDir, { recursive: true });
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
   }
 
-  const gitignorePath = path.join(getWorkspaceRoot(), '.gitignore');
-  const entry = '.fence/';
+  const config   = vscode.workspace.getConfiguration('fence');
+  const location = config.get<string>('storageLocation', 'home');
+
+  if (location === 'workspace') {
+    ensureGitignore(getWorkspaceRoot(), '.fence/');
+  }
+}
+
+function ensureGitignore(root: string, entry: string): void {
+  const gitignorePath = path.join(root, '.gitignore');
 
   if (fs.existsSync(gitignorePath)) {
     const contents = fs.readFileSync(gitignorePath, 'utf8');
@@ -64,7 +98,7 @@ function writeJson(filePath: string, data: unknown): void {
 
 export function getCurrentProfile(): SkillProfile | null {
   try {
-    return readJson<SkillProfile>(path.join(getFenceDir(), PROFILE_FILE));
+    return readJson<SkillProfile>(path.join(getDataDir(), PROFILE_FILE));
   } catch {
     return null;
   }
@@ -72,16 +106,16 @@ export function getCurrentProfile(): SkillProfile | null {
 
 export function getHistory(): ScanHistory {
   try {
-    return readJson<ScanHistory>(path.join(getFenceDir(), HISTORY_FILE)) ?? { entries: [] };
+    return readJson<ScanHistory>(path.join(getDataDir(), HISTORY_FILE)) ?? { entries: [] };
   } catch {
     return { entries: [] };
   }
 }
 
-// Assembles a full SkillProfile from scoring output, persists all three files,
-// and appends a history entry. Returns the written profile.
+// Assembles a full SkillProfile from scoring output, persists all three data
+// files, and appends a history entry. Returns the written profile.
 export function updateProfile(result: ScoringResult, agg: AggregatedSignals): SkillProfile {
-  ensureFenceDir();
+  ensureDataDir();
 
   // Preserve user-controlled fields across scans — don't reset mode or settings
   const existing = getCurrentProfile();
@@ -105,9 +139,9 @@ export function updateProfile(result: ScoringResult, agg: AggregatedSignals): Sk
     },
   };
 
-  const fenceDir = getFenceDir();
-  writeJson(path.join(fenceDir, PROFILE_FILE), profile);
-  writeJson(path.join(fenceDir, SIGNALS_FILE), agg);
+  const dataDir = getDataDir();
+  writeJson(path.join(dataDir, PROFILE_FILE), profile);
+  writeJson(path.join(dataDir, SIGNALS_FILE), agg);
   appendHistory(result, agg);
 
   return profile;
@@ -134,5 +168,5 @@ function appendHistory(result: ScoringResult, agg: AggregatedSignals): void {
   };
 
   history.entries.push(entry);
-  writeJson(path.join(getFenceDir(), HISTORY_FILE), history);
+  writeJson(path.join(getDataDir(), HISTORY_FILE), history);
 }

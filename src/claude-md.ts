@@ -47,12 +47,18 @@ const TIER_NAMES: Record<number, string> = {
 
 // ── Public API ─────────────────────────────────────────────────────────────
 
+// CLAUDE.md always lives in the workspace .fence/ so Claude Code can find it,
+// regardless of where profile.json and other data files are stored.
 export function generateClaudeMd(profile: SkillProfile): void {
   const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
   if (!root) return;
 
-  const outputPath = path.join(root, '.fence', 'CLAUDE.md');
-  fs.writeFileSync(outputPath, buildContent(profile), 'utf8');
+  const fenceDir = path.join(root, '.fence');
+  if (!fs.existsSync(fenceDir)) {
+    fs.mkdirSync(fenceDir, { recursive: true });
+  }
+
+  fs.writeFileSync(path.join(fenceDir, 'CLAUDE.md'), buildContent(profile), 'utf8');
 }
 
 // ── Template ───────────────────────────────────────────────────────────────
