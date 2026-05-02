@@ -7,6 +7,17 @@ export interface LineRange {
   end: number;   // 1-indexed, inclusive
 }
 
+// Returns the git config user.email for the repo containing filePath.
+// Returns empty string if git is unavailable or not configured.
+export async function getAuthorEmail(filePath: string): Promise<string> {
+  try {
+    const git = simpleGit({ baseDir: path.dirname(filePath) });
+    return (await git.raw(['config', 'user.email'])).trim();
+  } catch {
+    return '';
+  }
+}
+
 // Returns the line ranges in filePath authored by the current git user.
 // Falls back to the full file if: not a git repo, file is uncommitted,
 // git is not installed, or the user email can't be determined.

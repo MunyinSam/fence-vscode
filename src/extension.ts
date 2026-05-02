@@ -1,11 +1,8 @@
 import * as vscode from 'vscode';
+import { register as registerWatcher } from './watcher';
 
 export function activate(context: vscode.ExtensionContext) {
-	const cmd = vscode.commands.registerCommand('fence.helloWorld', () => {
-		vscode.window.showInformationMessage('Fence is alive!');
-	});
-
-	context.subscriptions.push(cmd);
+	registerWatcher(context);
 }
 
 export function deactivate() {}
