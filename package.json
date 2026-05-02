@@ -1,11 +1,15 @@
 {
-  "name": "fence-vscode",
+  "name": "fence",
   "displayName": "Fence",
   "description": "fence-vscode VS Code extension",
-  "version": "0.0.1",
+  "version": "1.1.0",
   "publisher": "MunyinSam",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MunyinSam/fence-vscode"
+  },
   "engines": {
-    "vscode": "^1.90.0"
+    "vscode": "^1.118.0"
   },
   "categories": [
     "Other"
@@ -16,13 +20,39 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "commands": [
+      {
+        "command": "fence.scanWorkspace",
+        "title": "Fence: Scan Workspace",
+        "category": "Fence"
+      },
+      {
+        "command": "fence.showProfile",
+        "title": "Fence: Show Profile",
+        "category": "Fence"
+      },
+      {
+        "command": "fence.setMode",
+        "title": "Fence: Set Mode",
+        "category": "Fence"
+      },
+      {
+        "command": "fence.resetProfile",
+        "title": "Fence: Reset Profile",
+        "category": "Fence"
+      }
+    ],
     "configuration": {
       "title": "Fence",
       "properties": {
         "fence.storageLocation": {
           "type": "string",
           "default": "home",
-          "enum": ["home", "workspace", "custom"],
+          "enum": [
+            "home",
+            "workspace",
+            "custom"
+          ],
           "enumDescriptions": [
             "Store in ~/.fence/ in your home directory (default, shared across projects)",
             "Store in .fence/ inside the current workspace (per-project, added to .gitignore)",
@@ -49,6 +79,7 @@
     "@types/mocha": "^10.0.10",
     "@types/node": "^20.19.39",
     "@types/vscode": "^1.118.0",
+    "@vscode/vsce": "^3.9.1",
     "mocha": "^11.7.5",
     "typescript": "^5.4.0"
   },

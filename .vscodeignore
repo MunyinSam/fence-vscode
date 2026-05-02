@@ -1,0 +1,19 @@
+# Source — compiled output in out/ is what ships
+src/
+
+# Test files — not needed at runtime
+test/
+out/test/
+
+# Dev tooling
+.vscode/
+.gitignore
+tsconfig.json
+.eslintrc*
+
+# Other repo directories not needed in the package
+fence/
+doc/
+
+# Build artifacts
+*.vsix
