@@ -116,6 +116,7 @@ export interface Scores {
   abstractionScore: number;
   errorHandlingScore: number;
   modernSyntaxScore: number;
+  breadthScore: number;
   antiPatternPenalty: number; // negative value, e.g. -0.08
   finalScore: number;         // 0–10
 }

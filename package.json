@@ -40,6 +40,11 @@
         "command": "fence.resetProfile",
         "title": "Fence: Reset Profile",
         "category": "Fence"
+      },
+      {
+        "command": "fence.showDashboard",
+        "title": "Fence: Show Dashboard",
+        "category": "Fence"
       }
     ],
     "configuration": {
