@@ -25,11 +25,12 @@
 
 Fence measures presence across 7 dimensions (capped at 1 per file to reward breadth, not repetition):
 
-- **Idioms** (30%) — patterns that show you write idiomatic TypeScript
-- **Complexity** (20%) — use of advanced constructs
+- **Idioms** (20%) — patterns that show you write idiomatic TypeScript
+- **Complexity** (15%) — use of advanced constructs
 - **Abstraction** (20%) — generic design
 - **Error handling** (15%) — how consistently you handle failure paths
-- **Modern syntax** (15%) — adoption of newer language features
+- **Modern syntax** (10%) — adoption of newer language features
+- **Construct breadth** (20%) — your breadth of TS knowledge
 - **Anti-pattern penalty** — `any`, `@ts-ignore`, unsafe assertions subtract from your score
 - **Concept fingerprints** — bonus detection for combinations like *Type Narrowing*, *Async Mastery*, *Type Safety*, and *Generic Design*
 
@@ -45,6 +46,7 @@ Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and run:
 | `Fence: Show Profile` | Print your current profile and scores to the Output panel |
 | `Fence: Set Mode` | Switch between **learn** mode (Claude teaches unknown constructs) and **assist** mode (Claude only uses known constructs) |
 | `Fence: Reset Profile` | Delete all profile data and start fresh |
+| `Fence: Show Dashboard` | Show your current skills breakdown and overtime growth graph |
 
 ## Storage
 
