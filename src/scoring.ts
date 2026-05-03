@@ -14,6 +14,11 @@ export function score(agg: AggregatedSignals): ScoringResult {
   const s  = agg.signalsByFile;
   const ap = agg.antiPatternsByFile;
   const n  = agg.totalFilesScanned;
+  const { knownConstructs, unknownConstructs } =
+    classifyConstructs(s, agg.conceptFingerprints, n);
+
+  // ── breadth score ──────────────────────────────────────────────────────
+  const breadthScore = knownConstructs.length / (knownConstructs.length + unknownConstructs.length)
 
   // ── idiom score ────────────────────────────────────────────────────────
   // Preserved from original: ratio of idiomatic patterns over idiomatic + anti-idiomatic.
@@ -63,11 +68,12 @@ export function score(agg: AggregatedSignals): ScoringResult {
   // ── final score ────────────────────────────────────────────────────────
   // Same weights as original. Penalty applied after weighted sum.
   const weighted =
-    (idiomScore         * 0.30) +
-    (complexityScore    * 0.20) +
+    (idiomScore         * 0.20) +
+    (complexityScore    * 0.15) +
     (abstractionScore   * 0.20) +
     (errorHandlingScore * 0.15) +
-    (modernSyntaxScore  * 0.15);
+    (modernSyntaxScore  * 0.10) +
+    (breadthScore       * 0.20);
 
   const finalScore = Math.max(1, Math.min(10, (weighted + antiPatternPenalty) * 10));
 
@@ -77,6 +83,7 @@ export function score(agg: AggregatedSignals): ScoringResult {
     abstractionScore,
     errorHandlingScore,
     modernSyntaxScore,
+    breadthScore,
     antiPatternPenalty,
     finalScore,
   };
@@ -84,8 +91,6 @@ export function score(agg: AggregatedSignals): ScoringResult {
   const tier      = getTier(finalScore);
   const tierLabel = TIER_LABELS[tier];
 
-  const { knownConstructs, unknownConstructs } =
-    classifyConstructs(s, agg.conceptFingerprints, n);
   const { conceptsUnderstood, conceptsNotYet } =
     classifyFingerprints(agg.conceptFingerprints);
 

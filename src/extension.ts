@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { register as registerWatcher } from './watcher';
 import { register as registerCommands } from './commands';
+import { register as registerDashboard } from './dashboard';
 import { getCurrentProfile, updateProfile } from './profile';
 import { scanFile } from './scanner';
 import { aggregate } from './aggregator';
@@ -12,6 +13,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const existing = getCurrentProfile();
 
   registerCommands(context);
+  registerDashboard(context);
 
   if (existing) {
     // Profile already exists — go straight to watching for changes
