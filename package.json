@@ -20,6 +20,20 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "commands": [
+      {
+        "command": "fence.showSkillProfile",
+        "title": "fence: Show Skill Profile"
+      },
+      {
+        "command": "fence.resetProfile",
+        "title": "fence: Reset Skill Profile"
+      },
+      {
+        "command": "fence.setApiKey",
+        "title": "fence: Set API Key"
+      }
+    ],
     "chatParticipants": [
       {
         "id": "MunyinSam.fence",

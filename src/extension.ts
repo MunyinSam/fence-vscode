@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import Anthropic from '@anthropic-ai/sdk';
 import { getApiKey, setApiKey } from './storage/apiKey';
+
 import { getSkillModel, hasSkillModel } from './storage/skillModel';
 import { runQuiz } from './quiz/runner';
 import { readEditorContext } from './context/reader';
@@ -12,6 +13,62 @@ import { routeResponse } from './gate/responseRouter';
 import { generateCode } from './generation/generator';
 import { buildRefusalMessage } from './generation/refusal';
 import { applyScoreToModel } from './skillModel/updater';
+
+const TIER_LABELS: Record<number, string> = {
+    1: 'Aware',
+    2: 'Recognizes',
+    3: 'Applies',
+    4: 'Chooses',
+    5: 'Designs',
+};
+
+function registerCommands(
+    context: vscode.ExtensionContext,
+    profileChannel: vscode.OutputChannel
+): void {
+    context.subscriptions.push(
+        vscode.commands.registerCommand('fence.showSkillProfile', () => {
+            const model = getSkillModel(context);
+            profileChannel.clear();
+            profileChannel.appendLine('fence — Skill Profile');
+            profileChannel.appendLine('─'.repeat(40));
+            for (const entry of model.concepts) {
+                const label = TIER_LABELS[entry.tier];
+                profileChannel.appendLine(
+                    `${entry.concept.padEnd(28)} Tier ${entry.tier} — ${label}  (${entry.confidence})`
+                );
+            }
+            profileChannel.appendLine('─'.repeat(40));
+            profileChannel.appendLine(`Last updated: ${model.lastUpdated}`);
+            profileChannel.show();
+        }),
+
+        vscode.commands.registerCommand('fence.resetProfile', async () => {
+            const confirmed = await vscode.window.showWarningMessage(
+                'Reset your fence skill profile? This will re-run the onboarding quiz.',
+                'Reset',
+                'Cancel'
+            );
+            if (confirmed !== 'Reset') {
+                return;
+            }
+            await context.globalState.update('fence.skillModel', undefined);
+            const apiKey = await getApiKey(context);
+            if (apiKey) {
+                await runQuiz(context, apiKey);
+            }
+        }),
+
+        vscode.commands.registerCommand('fence.setApiKey', async () => {
+            const newKey = await setApiKey(context);
+            if (newKey) {
+                vscode.window.showInformationMessage(
+                    'fence: API key updated. Reload the window for it to take effect.'
+                );
+            }
+        })
+    );
+}
 
 async function handleFenceRequest(
     context: vscode.ExtensionContext,
@@ -88,6 +145,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
 
     const client = new Anthropic({ apiKey });
+
+    const profileChannel = vscode.window.createOutputChannel('fence — Skill Profile');
+    context.subscriptions.push(profileChannel);
+
+    registerCommands(context, profileChannel);
 
     const participant = vscode.chat.createChatParticipant(
         'MunyinSam.fence',
