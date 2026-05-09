@@ -1,7 +1,7 @@
 {
   "name": "fence",
   "displayName": "Fence",
-  "description": "fence-vscode VS Code extension",
+  "description": "A skill-aware code assistant that gates AI generation to your current understanding",
   "version": "2.0.0",
   "publisher": "MunyinSam",
   "repository": {
@@ -12,84 +12,36 @@
     "vscode": "^1.118.0"
   },
   "categories": [
+    "AI",
     "Other"
   ],
   "activationEvents": [
-    "workspaceContains:**/*.ts",
-    "workspaceContains:**/*.tsx"
+    "onChatParticipant:fence"
   ],
   "main": "./out/extension.js",
   "contributes": {
-    "commands": [
+    "chatParticipants": [
       {
-        "command": "fence.scanWorkspace",
-        "title": "Fence: Scan Workspace",
-        "category": "Fence"
-      },
-      {
-        "command": "fence.showProfile",
-        "title": "Fence: Show Profile",
-        "category": "Fence"
-      },
-      {
-        "command": "fence.setMode",
-        "title": "Fence: Set Mode",
-        "category": "Fence"
-      },
-      {
-        "command": "fence.resetProfile",
-        "title": "Fence: Reset Profile",
-        "category": "Fence"
-      },
-      {
-        "command": "fence.showDashboard",
-        "title": "Fence: Show Dashboard",
-        "category": "Fence"
+        "id": "fence",
+        "name": "fence",
+        "description": "Generates code within your current skill level and updates your skill model over time",
+        "isSticky": true
       }
-    ],
-    "configuration": {
-      "title": "Fence",
-      "properties": {
-        "fence.storageLocation": {
-          "type": "string",
-          "default": "home",
-          "enum": [
-            "home",
-            "workspace",
-            "custom"
-          ],
-          "enumDescriptions": [
-            "Store in ~/.fence/ in your home directory (default, shared across projects)",
-            "Store in .fence/ inside the current workspace (per-project, added to .gitignore)",
-            "Store in a custom absolute path set via fence.customStoragePath"
-          ],
-          "description": "Where fence stores profile.json, signals.json, and history.json."
-        },
-        "fence.customStoragePath": {
-          "type": "string",
-          "default": "",
-          "description": "Absolute path to use when fence.storageLocation is set to 'custom'. Supports ~ as home directory shorthand."
-        }
-      }
-    }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "test": "npm run compile && node out/test/runScanner.js",
     "lint": "eslint src"
   },
   "devDependencies": {
-    "@types/mocha": "^10.0.10",
     "@types/node": "^20.19.39",
     "@types/vscode": "^1.118.0",
     "@vscode/vsce": "^3.9.1",
-    "mocha": "^11.7.5",
     "typescript": "^5.4.0"
   },
   "dependencies": {
-    "simple-git": "^3.36.0",
-    "ts-morph": "^28.0.0"
+    "@anthropic-ai/sdk": "^0.39.0"
   }
 }
