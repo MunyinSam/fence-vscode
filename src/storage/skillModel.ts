@@ -25,6 +25,10 @@ function blankSkillModel(): SkillModel {
     };
 }
 
+export function hasSkillModel(context: vscode.ExtensionContext): boolean {
+    return context.globalState.get<SkillModel>(STORAGE_KEY) !== undefined;
+}
+
 export function getSkillModel(context: vscode.ExtensionContext): SkillModel {
     const stored = context.globalState.get<SkillModel>(STORAGE_KEY);
     return stored ?? blankSkillModel();
