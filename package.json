@@ -22,7 +22,7 @@
   "contributes": {
     "chatParticipants": [
       {
-        "id": "fence",
+        "id": "MunyinSam.fence",
         "name": "fence",
         "description": "Generates code within your current skill level and updates your skill model over time",
         "isSticky": true
